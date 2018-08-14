@@ -2,7 +2,7 @@
 - name: Get Device Facts
   hosts: PHL-A1-FW2
   roles:
-    - Juniper.junos
+    - juniper.junos
   connection: local
   gather_facts: no
   tasks:
