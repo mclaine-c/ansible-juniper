@@ -1,17 +1,21 @@
 ---
 - name: Get Device Facts
-  hosts: PHL-A1-FW2
+  hosts: syrus-mdf-fw1
   roles:
     - juniper.junos
   connection: local
   gather_facts: no
   tasks:
-    - name: Retrieve device facts and configuration and save facts to file
-      juniper_junos_facts:
-        savedir: "/tmp/"
-        config_format: "xml"
-      register: result
+    - name: Checking NETCONF connectivity
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 830
+        timeout: 5
 
-    - name: Print configuration
+    - name: Retrieving information from devices running Junos OS
+      juniper_junos_facts:
+        host: "{{ inventory_hostname }}"
+
+    - name: Print version
       debug:
-        var: result.ansible_facts.junos.config
+        var: junos.hostname , junos.serialnumber , junos.version , junos.model
