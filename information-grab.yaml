@@ -1,6 +1,6 @@
 ---
 - name: Get Device Facts
-  hosts: {{ hostname }}
+  hosts: PHL-A1-FW2
   roles:
     - Juniper.junos
   connection: local
@@ -8,13 +8,13 @@
   tasks:
     - name: Checking NETCONF connectivity
       wait_for:
-        host: "{{ hostname }}"
+        host: "PHL-A1-FW2"
         port: 830
         timeout: 5
 
     - name: Retrieving information from devices running Junos OS
       juniper_junos_facts:
-        host: "{{ hostname }}"
+        host: "PHL-A1-FW2"
 
     - name: Print version
       debug:
