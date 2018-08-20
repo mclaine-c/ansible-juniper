@@ -38,6 +38,11 @@
         secure_dhcp_gw: "10.33.2.1"
         voice_cidr: "10.33.1.0/24"
         secure_cidr: "10.33.2.0/24"
+        snmp_location: "MFD"
+        snmp_contact: "neteng@subway.com"
+        snmp_auth_key: ""
+        snmp_priv_key: ""
+        snmp_user: ""
         
   tasks:      
     - name: Build base access switch config template
