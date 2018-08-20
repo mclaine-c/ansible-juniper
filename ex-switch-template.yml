@@ -25,7 +25,7 @@
         printer_gw_ip: '10.33.4.1/27'
         ospf_area: '0.0.13.0'
         voice_cidr: '10.33.1.0/24'
-        ospf_md5: ''
+        ospf_md5: '1234'
         access_cidr: "10.33.0.0/24"
         access_dhcp_low: "10.33.0.100"
         access_dhcp_high: "10.33.0.199"
@@ -39,9 +39,9 @@
         secure_cidr: "10.33.2.0/24"
         snmp_location: "MFD"
         snmp_contact: "neteng@subway.com"
-        snmp_auth_key: ""
-        snmp_priv_key: ""
-        snmp_user: ""
+        snmp_auth_key: "123"
+        snmp_priv_key: "1234"
+        snmp_user: "1234"
         
   tasks:      
     - name: Build base access switch config template
