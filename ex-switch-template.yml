@@ -4,7 +4,7 @@
   connection: local
   gather_facts: no
   roles:
-    - Juniper.junos
+    - juniper.junos
   vars:
     build_dir: "/tmp/"
     junos_base_config:
@@ -36,7 +36,6 @@
         secure_dhcp_low: "10.33.2.100"
         secure_dhcp_high: "10.33.2.199"  
         secure_dhcp_gw: "10.33.2.1"
-        voice_cidr: "10.33.1.0/24"
         secure_cidr: "10.33.2.0/24"
         snmp_location: "MFD"
         snmp_contact: "neteng@subway.com"
