@@ -1,0 +1,48 @@
+---
+- name: Configure Juniper Access Switch
+  hosts: syrus-idf-sw1
+  connection: local
+  gather_facts: no
+  roles:
+    - Juniper.junos
+  vars:
+    build_dir: "/tmp/"
+    junos_base_config:
+      - hostname: 'SYRUS'
+        timezone: 'EST'
+        acs_secret: '1234'
+        mgmt_gw: '10.33.4.129'
+        trust_p2p_sw_ip: '10.33.4.254/30'
+        wlan_p2p_sw_ip: '10.33.4.250/30'
+        airtame_p2p_sw_ip: '10.33.4.246/30'
+        mgmt_p2p_sw_ip: '10.33.4.242/30'
+        trust_gw_ip: '10.33.0.1/24'
+        voice_gw_ip: '10.33.1.1/24'
+        secure_gw_ip: '10.33.2.1/24'
+        guest_gw_ip: '10.33.3.1/24'
+        mgmt_gw_ip: '10.33.4.129/27'
+        airtame_gw_ip: '10.33.4.33/27'
+        printer_gw_ip: '10.33.4.1/27'
+        ospf_area: '0.0.13.0'
+        voice_cidr: '10.33.1.0/24'
+        ospf_md5: ''
+        access_cidr: "10.33.0.0/24"
+        access_dhcp_low: "10.33.0.100"
+        access_dhcp_high: "10.33.0.199"
+        access_dhcp_gw: "10.33.0.1"
+        voice_dhcp_low: "10.33.1.100"
+        voice_dhcp_high: "10.33.1.199"
+        voice_dhcp_gw: "10.33.1.1"
+        secure_dhcp_low: "10.33.2.100"
+        secure_dhcp_high: "10.33.2.199"  
+        secure_dhcp_gw: "10.33.2.1"
+        voice_cidr: "10.33.1.0/24"
+        secure_cidr: "10.33.2.0/24"
+        
+  tasks:      
+    - name: Build base access switch config template
+      template: src=template/junos_base_config.set.j2 dest={{build_dir}}/junos_base_config.set
+      with_items: junos_base_config
+
+    - name: Apply built config
+      junos_install_config: host={{ inventory_hostname }} file={{ build_dir }}junos_base_config.set overwrite=no timeout=300
