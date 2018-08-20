@@ -1,6 +1,6 @@
 ---
 - name: Configure Juniper Access Switch
-  hosts: syrus-idf-sw1
+  hosts: lab-4300
   connection: local
   gather_facts: no
   roles:
