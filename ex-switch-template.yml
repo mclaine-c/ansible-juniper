@@ -48,5 +48,5 @@
       template: src=template/junos_base_config.set.j2 dest={{build_dir}}/junos_base_config.set
       with_items: junos_base_config
 
-    - name: Apply built config
-      junos_install_config: host={{ inventory_hostname }} file={{ build_dir }}junos_base_config.set overwrite=no timeout=300
+#    - name: Apply built config
+#      junos_install_config: host={{ inventory_hostname }} file={{ build_dir }}junos_base_config.set overwrite=no timeout=300
