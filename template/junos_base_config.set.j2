@@ -3,12 +3,19 @@ set system host-name {{ item.hostname }}
 set system auto-snapshot
 set system domain-name subwaydai.com
 set system time-zone {{ item.timezone }}
+set system no-redirects
+set system no-ping-record-route
+set system no-ping-time-stamp
+set system internet-options no-source-quench
+set system internet-options no-tcp-reset drop-all-tcp
 set system authentication-order tacplus
+set system ports console log-out-on-disconnect
+set system root-authentication encrypted-password "$5$PHnZlQ3R$ZV.uutS9WqHj8ongfa9.x7Pm/eVO0q2e1t46SaUkeD5"
 set system name-server 10.1.0.6
 set system name-server 10.1.0.8
 set system name-server 10.50.1.26
 set system tacplus-server 10.50.1.22 secret {{ item.acs_secret }}
-set system tacplus-server 10.50.1.22 source-address {{ item.trust_gw_ip }}
+set system tacplus-server 10.50.1.22 source-address {{ item.mgmt_gw }}
 set system login class READ-ONLY idle-timeout 10
 set system login class READ-ONLY permissions view
 set system login class READ-ONLY permissions view-configuration
@@ -18,12 +25,17 @@ set system login user read-only class READ-ONLY
 set system login user remote full-name "ACS Template"
 set system login user remote uid 2050
 set system login user remote class super-user
-set system login user solarwinds uid 2002
-set system login user solarwinds class solarwinds
 set system services ssh root-login allow
 set system services ssh protocol-version v2
 set system services ssh max-sessions-per-connection 32
 set system services ssh rate-limit 2
+set system services netconf ssh
+set system services dhcp-local-server group TRUST interface irb.50
+set system services dhcp-local-server group TRUST interface irb.51
+set system services dhcp-local-server group TRUST interface irb.52
+set system services dhcp-local-server group GUEST-WLAN interface irb.53
+set system services dhcp-local-server group AIRTAME interface irb.54
+set system services dhcp-local-server group MANAGEMENT interface irb.55
 set system syslog archive size 100k
 set system syslog archive files 3
 set system syslog host 10.50.1.33 any any
@@ -35,27 +47,34 @@ set chassis redundancy graceful-switchover
 set chassis alarm management-ethernet link-down ignore
 set interfaces interface-range TRUST-RANGE member-range ge-0/0/2 to ge-0/0/45
 set interfaces interface-range TRUST-RANGE member-range ge-1/0/2 to ge-1/0/45
-set interfaces interface-range TRUST-RANGE ether-options ethernet-switch-profile storm-control P-STORM-CONTROL
+set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching storm-control P-STORM-CONTROL
 set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching interface-mode access
-set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching vlan members trust
+set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching vlan members trust_access
 set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching filter input F-VOIP-EF-ENET
 set interfaces interface-range TRUST-RANGE unit 0 family ethernet-switching recovery-timeout 120
-set interfaces ge-0/0/0 description "To {{ item.uplink0_info }}"
-set interfaces ge-0/0/0 unit 0 family ethernet-switching filter input F-VOIP-EF-INET
+set interfaces interface-range AP-RANGE member ge-0/0/47
+set interfaces interface-range AP-RANGE native-vlan-id 55
+set interfaces interface-range AP-RANGE unit 0 family ethernet-switching interface-mode trunk
+set interfaces interface-range AP-RANGE unit 0 family ethernet-switching vlan members trust_securewlan
+set interfaces interface-range AP-RANGE unit 0 family ethernet-switching vlan members trust_guestwlan
+set interfaces interface-range AP-RANGE unit 0 family ethernet-switching vlan members trust_mgmt
+set interfaces ge-0/0/0 description "To {{ item.hostname }}-MDF-FW1-1 Ethernet1/3"
+set interfaces ge-0/0/0 unit 0 family ethernet-switching filter input F-VOIP-EF-ENET
 set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk
-set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members trust-p2p
+set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members trust_p2p
 set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members trust_airtame-p2p
 set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members trust_guestwlan-p2p
 set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members trust_mgmt-p2p
-set interfaces ge-1/0/0 description "To {{ item.uplink1_info }}"
-set interfaces ge-1/0/0 unit 0 family ethernet-switching filter input F-VOIP-EF-INET
+set interfaces ge-1/0/0 description "To {{ item.hostname }}-MDF-FW1-2 Ethernet1/3"
+set interfaces ge-1/0/0 unit 0 family ethernet-switching filter input F-VOIP-EF-ENET
 set interfaces ge-1/0/0 unit 0 family ethernet-switching interface-mode trunk
-set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust-p2p
+set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust_p2p
 set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust_airtame-p2p
 set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust_guestwlan-p2p
-set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust_management-p2p
+set interfaces ge-1/0/0 unit 0 family ethernet-switching vlan members trust_mgmt-p2p
 set interfaces irb unit 4050 family inet address {{ item.trust_p2p_sw_ip }}
 set interfaces irb unit 4050 description trust-P2P
+set interfaces irb unit 4050 family inet filter input F-VOIP-EF-INET
 set interfaces irb unit 4053 family inet address {{ item.wlan_p2p_sw_ip }}
 set interfaces irb unit 4053 description trust-guestwlan-P2P
 set interfaces irb unit 4054 family inet address {{ item.airtame_p2p_sw_ip }}
@@ -76,14 +95,8 @@ set interfaces irb unit 54 description VR_AIRTAME
 set interfaces irb unit 54 family inet address {{ item.airtame_gw_ip }}
 set interfaces irb unit 56 description Printers
 set interfaces irb unit 56 family inet address {{ item.printer_gw_ip }}
-set snmp location {{ item.snmp_location }}
-set snmp contact (( item.snmp_contact ))
-set snmp v3 usm local-engine user {{ item.snmp_user }} authentication-sha authentication-key {{ item.snmp_auth_key }}
-set snmp v3 usm local-engine user {{ item.snmp_user }} privacy-aes128 privacy-key {{ item.snmp_priv_key }}
-set snmp v3 vacm security-to-group security-model usm security-name {{ item.snmp_user }} group {{ item.snmp-user }}-GROUP
-set snmp v3 vacm access group {{ item.snmp_user }}-GROUP default-context-prefix security-model usm security-level privacy read-view RO-VIEW
-set snmp engine-id use-default-ip-address
-set snmp view RO-VIEW oid .1 include
+set interfaces lo0 unit 0 family inet filter input F-MGMT-INET
+set interfaces lo0 unit 0 family inet address 127.0.0.1/32
 set forwarding-options storm-control-profiles P-STORM-CONTROL all bandwidth-percentage 75
 set forwarding-options storm-control-profiles P-STORM-CONTROL all no-registered-multicast
 set forwarding-options storm-control-profiles P-STORM-CONTROL action-shutdown
@@ -103,9 +116,6 @@ set protocols ospf area {{ item.ospf_area }} interface irb.50 authentication md5
 set protocols ospf area {{ item.ospf_area }} interface irb.50 bfd-liveness-detection minimum-interval 1000
 set protocols ospf area {{ item.ospf_area }} interface irb.50 bfd-liveness-detection multiplier 2
 set protocols ospf area {{ item.ospf_area }} interface irb.50 passive
-set protocols ospf area {{ item.ospf_area }} interface irb.50 hello-interval 3
-set protocols ospf area {{ item.ospf_area }} interface irb.50 dead-interval 12
-set protocols ospf area {{ item.ospf_area }} interface irb.50 authentication md5 1 key {{ item.ospf_md5 }}
 set protocols ospf area {{ item.ospf_area }} interface irb.52 passive
 set protocols ospf area {{ item.ospf_area }} interface irb.52 hello-interval 3
 set protocols ospf area {{ item.ospf_area }} interface irb.52 dead-interval 12
@@ -132,7 +142,7 @@ set protocols sflow interfaces xe-0/0/0.0
 set protocols sflow interfaces xe-1/0/0.0
 set protocols layer2-control nonstop-bridging
 set protocols layer2-control bpdu-block disable-timeout 120
-set protocols mstp configuration-name subwaydai
+set protocols mstp configuration-name {{ item.hostname }}
 set protocols mstp revision-level 1
 set protocols mstp bridge-priority 0
 set protocols mstp bpdu-block-on-edge
@@ -163,42 +173,102 @@ set firewall family inet filter F-VOIP-EF-INET term 1 from source-prefix-list PL
 set firewall family inet filter F-VOIP-EF-INET term 1 then loss-priority low
 set firewall family inet filter F-VOIP-EF-INET term 1 then forwarding-class CUST-COS-EF
 set firewall family inet filter F-VOIP-EF-INET term 2 then accept
+set firewall family inet filter F-MGMT-INET term t10 from destination-address 10.33.4.129/32
+set firewall family inet filter F-MGMT-INET term t10 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t10 from port ssh
+set firewall family inet filter F-MGMT-INET term t10 then accept
+set firewall family inet filter F-MGMT-INET term t11 from destination-address 10.33.4.129/32
+set firewall family inet filter F-MGMT-INET term t11 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t11 from protocol udp
+set firewall family inet filter F-MGMT-INET term t11 from port snmp
+set firewall family inet filter F-MGMT-INET term t11 then accept
+set firewall family inet filter F-MGMT-INET term t12 from destination-address 10.33.4.129/32
+set firewall family inet filter F-MGMT-INET term t12 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t12 from destination-port 830
+set firewall family inet filter F-MGMT-INET term t12 then accept
+set firewall family inet filter F-MGMT-INET term t13 from destination-address 10.33.4.129/32
+set firewall family inet filter F-MGMT-INET term t13 from protocol udp
+set firewall family inet filter F-MGMT-INET term t13 from destination-port ntp
+set firewall family inet filter F-MGMT-INET term t13 then accept
+set firewall family inet filter F-MGMT-INET term t14 from destination-address 10.33.4.129/32
+set firewall family inet filter F-MGMT-INET term t14 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t14 from destination-port 49
+set firewall family inet filter F-MGMT-INET term t14 then accept
+set firewall family inet filter F-MGMT-INET term t20 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t20 from port ssh
+set firewall family inet filter F-MGMT-INET term t20 then log
+set firewall family inet filter F-MGMT-INET term t20 then reject
+set firewall family inet filter F-MGMT-INET term t21 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t21 from protocol udp
+set firewall family inet filter F-MGMT-INET term t21 from destination-port snmp
+set firewall family inet filter F-MGMT-INET term t21 then log
+set firewall family inet filter F-MGMT-INET term t21 then reject
+set firewall family inet filter F-MGMT-INET term t22 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t22 from destination-port 830
+set firewall family inet filter F-MGMT-INET term t22 then log
+set firewall family inet filter F-MGMT-INET term t22 then reject
+set firewall family inet filter F-MGMT-INET term t23 from protocol udp
+set firewall family inet filter F-MGMT-INET term t23 from destination-port ntp
+set firewall family inet filter F-MGMT-INET term t23 then log
+set firewall family inet filter F-MGMT-INET term t23 then reject
+set firewall family inet filter F-MGMT-INET term t24 from protocol tcp
+set firewall family inet filter F-MGMT-INET term t24 from destination-port 49
+set firewall family inet filter F-MGMT-INET term t24 then log
+set firewall family inet filter F-MGMT-INET term t24 then reject
+set firewall family inet filter F-MGMT-INET term default then accept
 set firewall family ethernet-switching filter F-VOIP-EF-ENET term 1 from source-prefix-list PL-VOIP-SUBNETS
 set firewall family ethernet-switching filter F-VOIP-EF-ENET term 1 then forwarding-class CUST-COS-EF
 set firewall family ethernet-switching filter F-VOIP-EF-ENET term 1 then loss-priority low
 set firewall family ethernet-switching filter F-VOIP-EF-ENET term 2 then accept
+set access address-assignment pool POOL-ACCESS-DHCP family inet network {{ item.access_cidr}}
+set access address-assignment pool POOL-ACCESS-DHCP family inet range R-ACCESS low {{ item.access_dhcp_low }}
+set access address-assignment pool POOL-ACCESS-DHCP family inet range R-ACCESS high {{ item.access_dhcp_high }}
+set access address-assignment pool POOL-ACCESS-DHCP family inet dhcp-attributes domain-name subwaydai.com
+set access address-assignment pool POOL-ACCESS-DHCP family inet dhcp-attributes router {{ item.access_dhcp_gw }}
+set access address-assignment pool POOL-VOICE-DHCP family inet network {{ item.voice_cidr}}
+set access address-assignment pool POOL-VOICE-DHCP family inet range R-VOICE low {{ item.voice_dhcp_low }}
+set access address-assignment pool POOL-VOICE-DHCP family inet range R-VOICE high {{ item.voice_dhcp_high }}
+set access address-assignment pool POOL-VOICE-DHCP family inet dhcp-attributes domain-name subwaydai.com
+set access address-assignment pool POOL-VOICE-DHCP family inet dhcp-attributes router {{ item.voice_dhcp_gw }}
+set access address-assignment pool POOL-SECURE-DHCP family inet network {{ item.secure_cidr}}
+set access address-assignment pool POOL-SECURE-DHCP family inet range R-SECURE low {{ item.voice_dhcp_low }}
+set access address-assignment pool POOL-SECURE-DHCP family inet range R-SECURE high {{ item.voice_dhcp_high }}
+set access address-assignment pool POOL-SECURE-DHCP family inet dhcp-attributes domain-name subwaydai.com
+set access address-assignment pool POOL-SECURE-DHCP family inet dhcp-attributes router {{ item.secure_dhcp_gw }}
 set routing-instances VR_AIRTAME instance-type virtual-router
-set routing-instances VR_AIRTAME interface irb.4053
-set routing-instances VR_AIRTAME interface irb.53
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4053 hello-interval 3
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4053 dead-interval 12
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4053 authentication md5 1 key {{ item.ospf_md5 }}
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.53 passive
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.53 hello-interval 3
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.53 dead-interval 12
-set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.53 authentication md5 1 key {{ item.ospf_md5 }}
+set routing-instances VR_AIRTAME interface irb.4054
+set routing-instances VR_AIRTAME interface irb.54
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4054 hello-interval 3
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4054 dead-interval 12
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.4054 authentication md5 1 key {{ item.ospf_md5 }}
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.54 passive
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.54 hello-interval 3
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.54 dead-interval 12
+set routing-instances VR_AIRTAME protocols ospf area {{ item.ospf_area }} interface irb.54 authentication md5 1 key {{ item.ospf_md5 }}
 set routing-instances VR_GUESTWLAN instance-type virtual-router
-set routing-instances VR_GUESTWLAN interface irb.4054
-set routing-instances VR_GUESTWLAN interface irb.54
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4054 hello-interval 3
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4054 dead-interval 12
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4054 authentication md5 1 key {{ item.ospf_md5 }}
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.54 passive
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.54 hello-interval 3
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.54 dead-interval 12
-set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.54 authentication md5 1 key {{ item.ospf_md5 }}
+set routing-instances VR_GUESTWLAN interface irb.4053
+set routing-instances VR_GUESTWLAN interface irb.53
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4053 hello-interval 3
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4053 dead-interval 12
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.4053 authentication md5 1 key {{ item.ospf_md5 }}
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.53 passive
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.53 hello-interval 3
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.53 dead-interval 12
+set routing-instances VR_GUESTWLAN protocols ospf area 0.0.0.0 interface irb.53 authentication md5 1 key {{ item.ospf_md5 }}
 set switch-options voip interface TRUST-RANGE vlan voice
 set switch-options voip interface TRUST-RANGE forwarding-class expedited-forwarding
-set vlans trust-mgmt vlan-id 55
-set vlans trust-mgmt l3-interface irb.55
-set vlans trust-mgmt-p2p vlan-id 4055
-set vlans trust-mgmt-p2p l3-interface irb.4055
-set vlans trust-printers vlan-id 56
-set vlans trust-printers l3-interface irb.56
-set vlans trust-acess vlan-id 50
-set vlans trust-access l3-interface irb.50
-set vlans trust-p2p vlan-id 4050
-set vlans trust-p2p l3-interface irb.4050
+set poe interface all
+set vlans trust_mgmt vlan-id 55
+set vlans trust_mgmt l3-interface irb.55
+set vlans trust_mgmt-p2p vlan-id 4055
+set vlans trust_mgmt-p2p l3-interface irb.4055
+set vlans trust_printers vlan-id 56
+set vlans trust_printers l3-interface irb.56
+set vlans trust_access vlan-id 50
+set vlans trust_access l3-interface irb.50
+set vlans trust_access forwarding-options dhcp-security arp-inspection
+set vlans trust_p2p vlan-id 4050
+set vlans trust_p2p l3-interface irb.4050
 set vlans trust_airtame vlan-id 54
 set vlans trust_airtame l3-interface irb.54
 set vlans trust_airtame-p2p vlan-id 4054
